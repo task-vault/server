@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return "Visit taskvault.hrustinszkiadam.tech to see the app!"', () => {
+      expect(appController.getRoot()).toBe(
+        'Visit taskvault.hrustinszkiadam.tech to see the app!',
+      );
     });
   });
 });
