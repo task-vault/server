@@ -35,6 +35,9 @@ export class UsersService {
         password: hashedPassword,
       })
       .returning();
-    return user;
+    return {
+      ...user[0],
+      password: undefined,
+    };
   }
 }
