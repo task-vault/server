@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1744471543736,
-      "tag": "0000_blushing_overlord",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1744472696212,
-      "tag": "0001_left_vision",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1744484130883,
-      "tag": "0002_slippery_hannibal_king",
+      "when": 1744541087580,
+      "tag": "0000_cooing_phil_sheldon",
       "breakpoints": true
     }
   ]

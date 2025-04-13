@@ -1,7 +1,7 @@
 export type User = {
   id: string; // UUID
-  name: string;
-  username: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   created_at: Date;
