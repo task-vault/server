@@ -31,6 +31,14 @@ export class AuthService {
     });
   }
 
+  logout(response: Response) {
+    response.clearCookie('Authentication', {
+      httpOnly: true,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+    });
+    response.status(200);
+  }
+
   async validateUser(email: string, password: string) {
     try {
       const user = await this.usersService.getUser(undefined, email);
