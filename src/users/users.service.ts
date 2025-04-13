@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
 import * as schema from './users.schema';
@@ -39,5 +40,25 @@ export class UsersService {
       ...user[0],
       password: undefined,
     };
+  }
+
+  async getUser(id: string) {
+    const user = await this.drizzleService.db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, id),
+    });
+    if (!user) {
+      throw new UnauthorizedException(['Invalid credentials']);
+    }
+    return user;
+  }
+
+  async getUserByEmail(email: string) {
+    const user = await this.drizzleService.db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.email, email),
+    });
+    if (!user) {
+      throw new UnauthorizedException(['Invalid credentials']);
+    }
+    return user;
   }
 }
