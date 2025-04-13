@@ -11,7 +11,7 @@ export type TDatabase = NodePgDatabase<TSchema> & {
 
 @Injectable()
 export class DrizzleService implements OnModuleInit {
-  private db: ReturnType<typeof drizzle>;
+  db: TDatabase;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -27,12 +27,8 @@ export class DrizzleService implements OnModuleInit {
         ca: this.configService.get<string>('DB_CERT'),
       },
     });
-    this.db = drizzle(pool, { schema });
+    this.db = drizzle<TSchema>(pool, { schema });
 
     await this.db.$client.connect();
-  }
-
-  getDb(): TDatabase {
-    return this.db as TDatabase;
   }
 }
