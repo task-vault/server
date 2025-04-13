@@ -34,6 +34,11 @@ These endpoints require the user to be authenticated.
 
 ### User (Authenticated)
 
+#### `POST /users/refresh`
+
+**Description:**
+Refreshes the authentication token.
+
 #### `POST /users/logout`
 
 **Description:**  
