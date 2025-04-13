@@ -16,7 +16,7 @@ export class AuthService {
   ) {}
 
   login(user: User, response: Response) {
-    const payload: TokenPayload = { email: user.email, userId: user.id };
+    const payload: TokenPayload = { userId: user.id };
     const expirationMS = this.configService.get<number>('JWT_EXPIRATION');
 
     const accessToken = this.jwtService.sign(payload, {
@@ -24,7 +24,7 @@ export class AuthService {
       expiresIn: `${expirationMS}ms`,
     });
 
-    response.cookie('access_token', accessToken, {
+    response.cookie('Authentication', accessToken, {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
       maxAge: expirationMS,
@@ -33,7 +33,7 @@ export class AuthService {
 
   async validateUser(email: string, password: string) {
     try {
-      const user = await this.usersService.getUserByEmail(email);
+      const user = await this.usersService.getUser(undefined, email);
 
       const authenticated = await compare(password, user.password);
       if (!authenticated) {

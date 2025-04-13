@@ -6,6 +6,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { User } from './interfaces/user';
 import { Response } from 'express';
 import { AuthService } from '../auth/auth.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
@@ -32,6 +33,14 @@ export class UsersController {
       password: undefined,
       created_at: undefined,
       updated_at: undefined,
+    };
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  logout() {
+    return {
+      message: 'Logout successful',
     };
   }
 }

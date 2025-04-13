@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { LocalStrategy } from './strategies/local.strategy';
 import { ConfigModule } from '@nestjs/config';
 import { DrizzleModule } from '../drizzle/drizzle.module';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -19,7 +20,7 @@ describe('AuthService', () => {
         ConfigModule.forRoot({ isGlobal: true }),
         DrizzleModule,
       ],
-      providers: [AuthService, LocalStrategy],
+      providers: [AuthService, LocalStrategy, JwtStrategy],
     }).compile();
 
     service = module.get<AuthService>(AuthService);

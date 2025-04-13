@@ -42,23 +42,28 @@ export class UsersService {
     };
   }
 
-  async getUser(id: string) {
-    const user = await this.drizzleService.db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, id),
-    });
-    if (!user) {
-      throw new UnauthorizedException(['Invalid credentials']);
+  async getUser(
+    id?: string,
+    email?: string,
+  ): Promise<typeof schema.users.$inferSelect> {
+    if (!id && !email) {
+      throw new InternalServerErrorException(['No id or email provided']);
     }
-    return user;
-  }
 
-  async getUserByEmail(email: string) {
     const user = await this.drizzleService.db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, email),
+      where: (users, { eq }) => {
+        if (id) {
+          return eq(users.id, id);
+        }
+
+        return eq(users.email, email as string);
+      },
     });
+
     if (!user) {
       throw new UnauthorizedException(['Invalid credentials']);
     }
+
     return user;
   }
 }
