@@ -7,6 +7,7 @@ import { User } from './interfaces/user';
 import { Response } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtRefreshGuard } from '../auth/guards/jwt-refresh.guard';
 
 @Controller('users')
 export class UsersController {
@@ -22,23 +23,38 @@ export class UsersController {
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
-  login(
+  async login(
     @CurrentUser() user: User,
     @Res({ passthrough: true }) response: Response,
   ) {
-    this.authService.login(user, response);
-    response.status(200);
+    await this.authService.login(user, response);
     return {
       ...user,
       password: undefined,
-      created_at: undefined,
-      updated_at: undefined,
+      refreshToken: undefined,
     };
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  logout(@Res({ passthrough: true }) response: Response) {
-    return this.authService.logout(response);
+  async logout(
+    @CurrentUser() user: User,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return await this.authService.logout(response, user.id);
+  }
+
+  @Post('refresh')
+  @UseGuards(JwtRefreshGuard)
+  async refresh(
+    @CurrentUser() user: User,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.authService.login(user, response);
+    return {
+      ...user,
+      password: undefined,
+      refreshToken: undefined,
+    };
   }
 }

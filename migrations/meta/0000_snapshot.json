@@ -1,5 +1,5 @@
 {
-  "id": "cdf165ee-b29b-4cfe-b7da-97a9ca0639aa",
+  "id": "caf4ad02-f868-4ebc-8931-e283a7a2c373",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -38,6 +38,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "refreshToken": {
+          "name": "refreshToken",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

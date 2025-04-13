@@ -7,6 +7,7 @@ import {
 import { DrizzleService } from '../drizzle/drizzle.service';
 import * as schema from './users.schema';
 import { hash } from 'bcryptjs';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class UsersService {
@@ -39,6 +40,7 @@ export class UsersService {
     return {
       ...user[0],
       password: undefined,
+      refreshToken: undefined,
     };
   }
 
@@ -65,5 +67,29 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async setRefreshToken(
+    id: string,
+    refreshToken: (typeof schema.users.$inferInsert)['refreshToken'],
+  ) {
+    if (!id || !refreshToken) {
+      throw new BadRequestException(['No id or refresh token provided']);
+    }
+
+    await this.drizzleService.db
+      .update(schema.users)
+      .set({ refreshToken })
+      .where(eq(schema.users.id, id));
+  }
+
+  async revokeRefreshToken(id: string) {
+    if (!id) {
+      throw new BadRequestException(['No id provided']);
+    }
+    await this.drizzleService.db
+      .update(schema.users)
+      .set({ refreshToken: null })
+      .where(eq(schema.users.id, id));
   }
 }
