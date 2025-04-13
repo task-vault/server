@@ -2,7 +2,7 @@ import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserRequest } from './dto/create-user.request';
 import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from './interfaces/user';
 import { Response } from 'express';
 import { AuthService } from '../auth/auth.service';
