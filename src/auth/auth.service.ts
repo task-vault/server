@@ -15,7 +15,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(user: User, response: Response) {
+  async login(user: User, response: Response, shouldRemember: boolean) {
     const payload: TokenPayload = { userId: user.id };
     // ACCESS TOKEN LOGIC
     const accessExpirationMS = this.configService.getOrThrow<number>(
@@ -30,7 +30,7 @@ export class AuthService {
     response.cookie('Authentication', accessToken, {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
-      maxAge: accessExpirationMS,
+      maxAge: shouldRemember ? accessExpirationMS : undefined,
     });
 
     const refreshExpirationMS = this.configService.getOrThrow<number>(
@@ -38,6 +38,14 @@ export class AuthService {
     );
 
     // REFRESH TOKEN LOGIC
+
+    if (!shouldRemember) {
+      response.clearCookie('Refresh', {
+        httpOnly: true,
+        secure: this.configService.get<string>('NODE_ENV') === 'production',
+      });
+      return;
+    }
 
     if (user.refreshToken) {
       const expirationTime = user.updated_at.getTime() + refreshExpirationMS;
@@ -55,7 +63,6 @@ export class AuthService {
           secure: this.configService.get<string>('NODE_ENV') === 'production',
           expires: expirationDate,
         });
-        response.status(200);
         return;
       }
     }
@@ -72,8 +79,6 @@ export class AuthService {
       secure: this.configService.get<string>('NODE_ENV') === 'production',
       maxAge: refreshExpirationMS,
     });
-
-    response.status(200);
   }
 
   async logout(response: Response, userId: string) {
@@ -88,7 +93,6 @@ export class AuthService {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
     });
-    response.status(200);
   }
 
   async validateUser(email: string, password: string) {
