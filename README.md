@@ -16,13 +16,11 @@ These endpoints are publicly accessible and do **not** require authentication.
 
 **Description:**
 Registers a new user.
-**Authentication Options:** Email & Password, Google.
 
 #### `POST /users/login`
 
-**Description:**  
-Authenticates an existing user.  
-**Authentication Options:** Email & Password, Google.
+**Description:**
+Authenticates an existing user.
 
 ---
 
@@ -41,7 +39,7 @@ Refreshes the authentication token.
 
 #### `POST /users/logout`
 
-**Description:**  
+**Description:**
 Logs out the authenticated user.
 
 ---
@@ -50,43 +48,43 @@ Logs out the authenticated user.
 
 #### `GET /tasks`
 
-**Description:**  
+**Description:**
 Fetches all tasks for the authenticated user.
 
 #### `POST /tasks`
 
-**Description:**  
+**Description:**
 Creates a new task.
 
 #### `DELETE /tasks`
 
-**Description:**  
-Deletes multiple tasks.  
+**Description:**
+Deletes multiple tasks.
 **Note:** Task IDs must be provided in the request body.
 
 #### `GET /tasks/:taskId`
 
-**Description:**  
+**Description:**
 Fetches a specific task by ID.
 
 #### `PUT /tasks/:taskId`
 
-**Description:**  
+**Description:**
 Updates a specific task by ID.
 
 #### `DELETE /tasks/:taskId`
 
-**Description:**  
+**Description:**
 Deletes a specific task by ID.
 
 #### `POST /tasks/:taskId/complete`
 
-**Description:**  
+**Description:**
 Marks a task as completed.
 
 #### `DELETE /tasks/:taskId/complete`
 
-**Description:**  
+**Description:**
 Marks a task as incomplete.
 
 ---
@@ -95,38 +93,38 @@ Marks a task as incomplete.
 
 #### `GET /tasks/:taskId/subtasks`
 
-**Description:**  
+**Description:**
 Returns all subtasks for a given task.
 
 #### `POST /tasks/:taskId/subtasks`
 
-**Description:**  
+**Description:**
 Creates a new subtask for the specified task.
 
 #### `DELETE /tasks/:taskId/subtasks`
 
-**Description:**  
-Deletes multiple subtasks.  
+**Description:**
+Deletes multiple subtasks.
 **Note:** Subtask IDs must be provided in the request body.
 
 #### `PUT /tasks/:taskId/subtasks/:subtaskId`
 
-**Description:**  
+**Description:**
 Updates a specific subtask.
 
 #### `DELETE /tasks/:taskId/subtasks/:subtaskId`
 
-**Description:**  
+**Description:**
 Deletes a specific subtask.
 
 #### `POST /tasks/:taskId/subtasks/:subtaskId/complete`
 
-**Description:**  
+**Description:**
 Marks a subtask as completed.
 
 #### `DELETE /tasks/:taskId/subtasks/:subtaskId/complete`
 
-**Description:**  
+**Description:**
 Marks a subtask as incomplete.
 
 ---
@@ -135,30 +133,30 @@ Marks a subtask as incomplete.
 
 #### `GET /categories`
 
-**Description:**  
+**Description:**
 Returns all categories belonging to the user.
 
 #### `POST /categories`
 
-**Description:**  
+**Description:**
 Creates a new category.
 
 #### `GET /categories/:categoryId`
 
-**Description:**  
+**Description:**
 Fetches a specific category by ID.
 
 #### `PUT /categories/:categoryId`
 
-**Description:**  
+**Description:**
 Updates a specific category.
 
 #### `DELETE /categories/:categoryId`
 
-**Description:**  
+**Description:**
 Deletes a specific category.
 
 #### `GET /categories/:categoryId/tasks`
 
-**Description:**  
+**Description:**
 Returns all tasks associated with a specific category.
