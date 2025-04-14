@@ -29,10 +29,10 @@ export class TasksController {
     return await this.tasksService.getAll(user.id);
   }
 
-  @Get(':id')
+  @Get(':taskId')
   @UseGuards(JwtAuthGuard)
-  async getTask(@Param('id', ParseIntPipe) id: Task['id']) {
-    return await this.tasksService.getSingle(id);
+  async getTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
+    return await this.tasksService.getSingle(taskId);
   }
 
   @Get('/state/:state')
@@ -57,24 +57,24 @@ export class TasksController {
     return await this.tasksService.create(user.id, task);
   }
 
-  @Post(':id/complete')
+  @Post(':taskId/complete')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
-  async completeTask(@Param('id', ParseIntPipe) id: Task['id']) {
-    return await this.tasksService.toggleComplete(id, true);
+  async completeTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
+    return await this.tasksService.toggleComplete(taskId, true);
   }
 
-  @Post(':id/uncomplete')
+  @Post(':taskId/uncomplete')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
-  async uncompleteTask(@Param('id', ParseIntPipe) id: Task['id']) {
-    return await this.tasksService.toggleComplete(id, false);
+  async uncompleteTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
+    return await this.tasksService.toggleComplete(taskId, false);
   }
 
-  @Delete(':id')
+  @Delete(':taskId')
   @HttpCode(204)
   @UseGuards(JwtAuthGuard)
-  async deleteTask(@Param('id', ParseIntPipe) id: Task['id']) {
-    return await this.tasksService.delete(id);
+  async deleteTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
+    return await this.tasksService.delete(taskId);
   }
 }

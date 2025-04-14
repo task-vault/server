@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
 import { Task, TaskInsert } from './interfaces/task';
 import { State } from './interfaces/state-param';
@@ -9,7 +13,7 @@ import { eq } from 'drizzle-orm';
 export class TasksService {
   constructor(private readonly drizzleService: DrizzleService) {}
 
-  async getAll(userId: string) {
+  async getAll(userId: string): Promise<Partial<Task>[]> {
     const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
     });
@@ -24,12 +28,12 @@ export class TasksService {
     });
   }
 
-  async getSingle(id: Task['id']) {
+  async getSingle(taskId: Task['id']): Promise<Partial<Task>> {
     const task = await this.drizzleService.db.query.tasks.findFirst({
-      where: (tasks, { eq }) => eq(tasks.id, id),
+      where: (tasks, { eq }) => eq(tasks.id, taskId),
     });
     if (!task) {
-      throw new NotFoundException(`Task with id ${id} not found`);
+      throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
 
     return {
@@ -40,7 +44,7 @@ export class TasksService {
     };
   }
 
-  async getByState(userId: string, state: State) {
+  async getByState(userId: string, state: State): Promise<Partial<Task>[]> {
     const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
     });
@@ -68,7 +72,10 @@ export class TasksService {
     });
   }
 
-  async create(userId: string, task: Omit<TaskInsert, 'userId'>) {
+  async create(
+    userId: string,
+    task: Omit<TaskInsert, 'userId'>,
+  ): Promise<Partial<Task>> {
     const data: TaskInsert = {
       ...task,
       deadline: task.deadline ? new Date(task.deadline) : null,
@@ -78,7 +85,7 @@ export class TasksService {
       await this.drizzleService.db.insert(tasks).values(data).returning()
     ).at(0);
     if (!newTask) {
-      throw new Error('Failed to create task');
+      throw new InternalServerErrorException(['Failed to create task']);
     }
 
     return {
@@ -89,16 +96,19 @@ export class TasksService {
     };
   }
 
-  async toggleComplete(id: Task['id'], completed: boolean) {
+  async toggleComplete(
+    taskId: Task['id'],
+    completed: boolean,
+  ): Promise<Partial<Task>> {
     const updatedTask = (
       await this.drizzleService.db
         .update(tasks)
         .set({ completed })
-        .where(eq(tasks.id, id))
+        .where(eq(tasks.id, taskId))
         .returning()
     ).at(0);
     if (!updatedTask) {
-      throw new NotFoundException(`Task with id ${id} not found`);
+      throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
 
     return {
@@ -109,15 +119,15 @@ export class TasksService {
     };
   }
 
-  async delete(id: Task['id']) {
+  async delete(taskId: Task['id']) {
     const deletedTask = (
       await this.drizzleService.db
         .delete(tasks)
-        .where(eq(tasks.id, id))
+        .where(eq(tasks.id, taskId))
         .returning()
     ).at(0);
     if (!deletedTask) {
-      throw new NotFoundException(`Task with id ${id} not found`);
+      throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
   }
 }
