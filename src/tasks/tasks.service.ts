@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
-import { Task } from './interfaces/task.d';
+import { Task, TaskInsert } from './interfaces/task.d';
 import { State } from './interfaces/state-param.d';
+import { tasks } from './tasks.schema';
 
 @Injectable()
 export class TasksService {
@@ -48,5 +49,25 @@ export class TasksService {
         updated_at: undefined,
       };
     });
+  }
+
+  async create(userId: string, task: Omit<TaskInsert, 'userId'>) {
+    const data: TaskInsert = {
+      ...task,
+      userId,
+    };
+    const newTask = (
+      await this.drizzleService.db.insert(tasks).values(data).returning()
+    ).at(0);
+    if (!newTask) {
+      throw new Error('Failed to create task');
+    }
+
+    return {
+      ...newTask,
+      userId: undefined,
+      created_at: undefined,
+      updated_at: undefined,
+    };
   }
 }
