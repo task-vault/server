@@ -27,7 +27,7 @@ You can find detailed API documentation, including example requests and response
 
 ---
 
-## 📦 Project Structure
+## Project Structure
 
 ```pre
 task-vault-server/
