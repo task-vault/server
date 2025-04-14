@@ -8,12 +8,13 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../users/users.schema';
+import { timestamps } from '../drizzle/helpers/timestamps.schema';
 
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
   userId: uuid('userId')
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
   completed: boolean('completed').notNull().default(false),
@@ -21,16 +22,7 @@ export const tasks = pgTable('tasks', {
     mode: 'date',
     precision: 0,
   }),
-  created_at: timestamp('created_at', {
-    mode: 'date',
-    precision: 0,
-  })
-    .notNull()
-    .defaultNow(),
-  updated_at: timestamp('updated_at', { mode: 'date', precision: 0 })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  ...timestamps,
 });
 
 export const tasksRelations = relations(tasks, ({ one }) => ({
