@@ -113,7 +113,6 @@ export class AuthService {
   async verifyRefreshToken(refreshToken: string, userId: string) {
     try {
       const user = await this.usersService.getUser(userId);
-      console.log(user);
 
       if (!user || !user.refreshToken) {
         throw new UnauthorizedException();
