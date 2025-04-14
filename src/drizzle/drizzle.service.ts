@@ -17,14 +17,14 @@ export class DrizzleService implements OnModuleInit {
 
   async onModuleInit() {
     const pool = new Pool({
-      user: this.configService.get<string>('DB_USER'),
-      password: this.configService.get<string>('DB_PASSWORD'),
-      host: this.configService.get<string>('DB_HOST'),
-      port: this.configService.get<number>('DB_PORT'),
-      database: this.configService.get<string>('DB_NAME'),
+      user: this.configService.getOrThrow<string>('DB_USER'),
+      password: this.configService.getOrThrow<string>('DB_PASSWORD'),
+      host: this.configService.getOrThrow<string>('DB_HOST'),
+      port: this.configService.getOrThrow<number>('DB_PORT'),
+      database: this.configService.getOrThrow<string>('DB_NAME'),
       ssl: {
         rejectUnauthorized: true,
-        ca: this.configService.get<string>('DB_CERT'),
+        ca: this.configService.getOrThrow<string>('DB_CERT'),
       },
     });
     this.db = drizzle<TSchema>(pool, { schema });

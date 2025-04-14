@@ -15,20 +15,25 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  private isProduction() {
+    return this.configService.get<string>('NODE_ENV') === 'production';
+  }
+
   async login(user: User, response: Response, shouldRemember: boolean) {
     const payload: TokenPayload = { userId: user.id };
+    const isProduction = this.isProduction();
 
     const { accessToken, maxAge } = this.generateAccessToken(payload);
     response.cookie('Authentication', accessToken, {
       httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      secure: isProduction,
       maxAge: shouldRemember ? maxAge : undefined,
     });
 
     if (!shouldRemember) {
       response.clearCookie('Refresh', {
         httpOnly: true,
-        secure: this.configService.get<string>('NODE_ENV') === 'production',
+        secure: isProduction,
       });
       return;
     }
@@ -39,7 +44,7 @@ export class AuthService {
     );
     response.cookie('Refresh', refreshToken, {
       httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      secure: isProduction,
       expires,
     });
   }
@@ -53,7 +58,7 @@ export class AuthService {
     );
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       expiresIn: `${accessExpirationMS}ms`,
     });
 
@@ -85,7 +90,7 @@ export class AuthService {
     }
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       expiresIn: `${refreshExpirationMS}ms`,
     });
     await this.usersService.setRefreshToken(user.id, refreshToken);
@@ -100,15 +105,16 @@ export class AuthService {
 
   async logout(response: Response, userId: string) {
     await this.usersService.revokeRefreshToken(userId);
+    const isProduction = this.isProduction();
 
     response.clearCookie('Authentication', {
       httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      secure: isProduction,
     });
 
     response.clearCookie('Refresh', {
       httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      secure: isProduction,
     });
   }
 
@@ -116,14 +122,14 @@ export class AuthService {
     try {
       const user = await this.usersService.getUser(undefined, email);
       if (!user) {
-        throw new UnauthorizedException();
+        throw new Error();
       }
 
       const authenticated = await compare(password, user.password);
-
       if (!authenticated) {
-        throw new UnauthorizedException();
+        throw new Error();
       }
+
       return user;
     } catch {
       throw new UnauthorizedException(['Invalid credentials']);
@@ -134,8 +140,9 @@ export class AuthService {
     try {
       const user = await this.usersService.getUser(userId);
       if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
-        throw new UnauthorizedException();
+        throw new Error();
       }
+
       return user;
     } catch {
       throw new UnauthorizedException(['Invalid refresh token']);

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
 import { Task, TaskInsert } from './interfaces/task';
 import { State } from './interfaces/state-param';
@@ -29,7 +33,7 @@ export class TasksService {
       where: (tasks, { eq }) => eq(tasks.id, taskId),
     });
     if (!task) {
-      throw new NotFoundException(`Task with id ${taskId} not found`);
+      throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
 
     return {
@@ -81,7 +85,7 @@ export class TasksService {
       await this.drizzleService.db.insert(tasks).values(data).returning()
     ).at(0);
     if (!newTask) {
-      throw new Error('Failed to create task');
+      throw new InternalServerErrorException(['Failed to create task']);
     }
 
     return {
@@ -104,7 +108,7 @@ export class TasksService {
         .returning()
     ).at(0);
     if (!updatedTask) {
-      throw new NotFoundException(`Task with id ${taskId} not found`);
+      throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
 
     return {
@@ -123,7 +127,7 @@ export class TasksService {
         .returning()
     ).at(0);
     if (!deletedTask) {
-      throw new NotFoundException(`Task with id ${taskId} not found`);
+      throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
   }
 }
