@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
 import { Task } from './interfaces/task.d';
-import { State } from './interfaces/stateParam.d';
+import { State } from './interfaces/state-param.d';
 
 @Injectable()
 export class TasksService {

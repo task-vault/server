@@ -9,7 +9,7 @@ import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/interfaces/user.d';
-import { State, states } from './interfaces/stateParam.d';
+import { State, states } from './interfaces/state-param.d';
 
 @Controller('tasks')
 export class TasksController {
