@@ -1,162 +1,41 @@
-# API Endpoints Documentation
+# Task Vault – Server
 
-This document outlines the API endpoints for the application. The endpoints are categorized into open and authenticated sections.
-
----
-
-## Open Endpoints
-
-These endpoints are publicly accessible and do **not** require authentication.
+This is the **backend API** for the Task Vault project.  
+Additional information about **Task Vault** can be found here: **[task-vault](https://github.com/task-vault)**
 
 ---
 
-### User (Open)
+## API Documentation
 
-#### `POST /users/register`
+You can find detailed API documentation, including example requests and responses, at:
 
-**Description:**
-Registers a new user.
-
-#### `POST /users/login`
-
-**Description:**
-Authenticates an existing user.
+👉 **[docs.hrustinszki.tech](https://docs.hrustinszki.tech)**
 
 ---
 
-## Authenticated Endpoints
+## Tech Stack
 
-These endpoints require the user to be authenticated.
+### Backend
 
----
+- **Framework**: [NestJS](https://docs.nestjs.com) (deployed on AWS EC2)
+- **ORM**: [Drizzle ORM](https://orm.drizzle.team/docs/overview)
+- **Authentication**: JWT-based auth using [Passport](https://www.passportjs.org/concepts/authentication/)
 
-### User (Authenticated)
+### Database
 
-#### `POST /users/refresh`
-
-**Description:**
-Refreshes the authentication token.
-
-#### `POST /users/logout`
-
-**Description:**
-Logs out the authenticated user.
+- **Database**: PostgreSQL (managed by [Aiven.io](https://aiven.io))
 
 ---
 
-### Tasks
+## Project Structure
 
-#### `GET /tasks`
-
-**Description:**
-Fetches all tasks for the authenticated user.
-
-#### `POST /tasks`
-
-**Description:**
-Creates a new task.
-
-#### `DELETE /tasks`
-
-**Description:**
-Deletes multiple tasks.
-**Note:** Task IDs must be provided in the request body.
-
-#### `GET /tasks/:taskId`
-
-**Description:**
-Fetches a specific task by ID.
-
-#### `PUT /tasks/:taskId`
-
-**Description:**
-Updates a specific task by ID.
-
-#### `DELETE /tasks/:taskId`
-
-**Description:**
-Deletes a specific task by ID.
-
-#### `POST /tasks/:taskId/complete`
-
-**Description:**
-Marks a task as completed.
-
-#### `DELETE /tasks/:taskId/complete`
-
-**Description:**
-Marks a task as incomplete.
-
----
-
-### Subtasks
-
-#### `GET /tasks/:taskId/subtasks`
-
-**Description:**
-Returns all subtasks for a given task.
-
-#### `POST /tasks/:taskId/subtasks`
-
-**Description:**
-Creates a new subtask for the specified task.
-
-#### `DELETE /tasks/:taskId/subtasks`
-
-**Description:**
-Deletes multiple subtasks.
-**Note:** Subtask IDs must be provided in the request body.
-
-#### `PUT /tasks/:taskId/subtasks/:subtaskId`
-
-**Description:**
-Updates a specific subtask.
-
-#### `DELETE /tasks/:taskId/subtasks/:subtaskId`
-
-**Description:**
-Deletes a specific subtask.
-
-#### `POST /tasks/:taskId/subtasks/:subtaskId/complete`
-
-**Description:**
-Marks a subtask as completed.
-
-#### `DELETE /tasks/:taskId/subtasks/:subtaskId/complete`
-
-**Description:**
-Marks a subtask as incomplete.
-
----
-
-### Categories
-
-#### `GET /categories`
-
-**Description:**
-Returns all categories belonging to the user.
-
-#### `POST /categories`
-
-**Description:**
-Creates a new category.
-
-#### `GET /categories/:categoryId`
-
-**Description:**
-Fetches a specific category by ID.
-
-#### `PUT /categories/:categoryId`
-
-**Description:**
-Updates a specific category.
-
-#### `DELETE /categories/:categoryId`
-
-**Description:**
-Deletes a specific category.
-
-#### `GET /categories/:categoryId/tasks`
-
-**Description:**
-Returns all tasks associated with a specific category.
+```pre
+task-vault-server/
+├── src/
+│   ├── auth/          # Authentication logic (JWT, Passport)
+│   ├── tasks/         # Task-related endpoints
+│   ├── users/         # User registration and management
+│   └── ...            # Additional modules
+├── drizzle/           # ORM configuration and migrations
+└── main.ts            # Entry point
+```
