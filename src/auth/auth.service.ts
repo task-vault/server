@@ -17,27 +17,13 @@ export class AuthService {
 
   async login(user: User, response: Response, shouldRemember: boolean) {
     const payload: TokenPayload = { userId: user.id };
-    // ACCESS TOKEN LOGIC
-    const accessExpirationMS = this.configService.getOrThrow<number>(
-      'JWT_ACCESS_EXPIRATION',
-    );
 
-    const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-      expiresIn: `${accessExpirationMS}ms`,
-    });
-
+    const { accessToken, maxAge } = this.generateAccessToken(payload);
     response.cookie('Authentication', accessToken, {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
-      maxAge: shouldRemember ? accessExpirationMS : undefined,
+      maxAge: shouldRemember ? maxAge : undefined,
     });
-
-    const refreshExpirationMS = this.configService.getOrThrow<number>(
-      'JWT_REFRESH_EXPIRATION',
-    );
-
-    // REFRESH TOKEN LOGIC
 
     if (!shouldRemember) {
       response.clearCookie('Refresh', {
@@ -47,38 +33,69 @@ export class AuthService {
       return;
     }
 
+    const { refreshToken, expires } = await this.generateRefreshToken(
+      user,
+      payload,
+    );
+    response.cookie('Refresh', refreshToken, {
+      httpOnly: true,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      expires,
+    });
+  }
+
+  private generateAccessToken(payload: TokenPayload): {
+    accessToken: string;
+    maxAge: number;
+  } {
+    const accessExpirationMS = this.configService.getOrThrow<number>(
+      'JWT_ACCESS_EXPIRATION',
+    );
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      expiresIn: `${accessExpirationMS}ms`,
+    });
+
+    return { accessToken, maxAge: accessExpirationMS };
+  }
+
+  private async generateRefreshToken(
+    user: User,
+    payload: TokenPayload,
+  ): Promise<{ refreshToken: string; expires: Date }> {
+    const refreshExpirationMS = this.configService.getOrThrow<number>(
+      'JWT_REFRESH_EXPIRATION',
+    );
+
     if (user.refreshToken) {
       const expirationTime = user.updated_at.getTime() + refreshExpirationMS;
+      const currentTime = new Date(Date.now()).getTime();
 
       const expirationDate = new Date(user.updated_at);
       expirationDate.setMilliseconds(
         expirationDate.getMilliseconds() + refreshExpirationMS,
       );
 
-      const currentTime = new Date(Date.now()).getTime();
-
       if (currentTime < expirationTime) {
-        response.cookie('Refresh', user.refreshToken, {
-          httpOnly: true,
-          secure: this.configService.get<string>('NODE_ENV') === 'production',
-          expires: expirationDate,
-        });
-        return;
+        return { refreshToken: user.refreshToken, expires: expirationDate };
       }
+
+      await this.usersService.revokeRefreshToken(user.id);
     }
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: `${refreshExpirationMS}ms`,
     });
-
     await this.usersService.setRefreshToken(user.id, refreshToken);
 
-    response.cookie('Refresh', refreshToken, {
-      httpOnly: true,
-      secure: this.configService.get<string>('NODE_ENV') === 'production',
-      maxAge: refreshExpirationMS,
-    });
+    const expirationDate = new Date(Date.now());
+    expirationDate.setMilliseconds(
+      expirationDate.getMilliseconds() + refreshExpirationMS,
+    );
+
+    return { refreshToken, expires: expirationDate };
   }
 
   async logout(response: Response, userId: string) {
@@ -98,29 +115,30 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     try {
       const user = await this.usersService.getUser(undefined, email);
-
-      const authenticated = await compare(password, user.password);
-      if (!authenticated) {
+      if (!user) {
         throw new UnauthorizedException();
       }
 
+      const authenticated = await compare(password, user.password);
+
+      if (!authenticated) {
+        throw new UnauthorizedException();
+      }
       return user;
     } catch {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(['Invalid credentials']);
     }
   }
 
   async verifyRefreshToken(refreshToken: string, userId: string) {
     try {
       const user = await this.usersService.getUser(userId);
-
-      if (!user || !user.refreshToken) {
+      if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
         throw new UnauthorizedException();
       }
-
       return user;
     } catch {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException(['Invalid refresh token']);
     }
   }
 }
