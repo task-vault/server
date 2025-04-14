@@ -130,7 +130,7 @@ export class AuthService {
     }
   }
 
-  async verifyRefreshToken(refreshToken: string, userId: string) {
+  async validateRefreshToken(refreshToken: string, userId: string) {
     try {
       const user = await this.usersService.getUser(userId);
       if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
