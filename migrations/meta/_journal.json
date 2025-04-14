@@ -15,6 +15,13 @@
       "when": 1744628014574,
       "tag": "0001_windy_lila_cheney",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744628693540,
+      "tag": "0002_kind_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

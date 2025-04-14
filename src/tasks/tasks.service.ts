@@ -1,42 +1,52 @@
 import { Injectable } from '@nestjs/common';
+import { DrizzleService } from '../drizzle/drizzle.service';
+import { Task } from './interfaces/task.d';
+import { State } from './interfaces/stateParam.d';
 
 @Injectable()
 export class TasksService {
-  constructor() {}
+  constructor(private readonly drizzleService: DrizzleService) {}
 
   async getAll(userId: string) {
-    // Simulate fetching tasks from a database
-    return await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          { id: 1, title: 'Task 1', userId },
-          { id: 2, title: 'Task 2', userId },
-        ]);
-      }, 1000);
+    const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
+      where: (tasks, { eq }) => eq(tasks.userId, userId),
+    });
+
+    return tasks.map((task) => {
+      return {
+        ...task,
+        userId: undefined,
+        created_at: undefined,
+        updated_at: undefined,
+      };
     });
   }
 
-  async getCompleted(userId: string) {
-    // Simulate fetching completed tasks from a database
-    return await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          { id: 1, title: 'Completed Task 1', userId },
-          { id: 2, title: 'Completed Task 2', userId },
-        ]);
-      }, 1000);
+  async getByState(userId: string, state: State) {
+    const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
+      where: (tasks, { eq }) => eq(tasks.userId, userId),
     });
-  }
 
-  async getIncompleted(userId: string) {
-    // Simulate fetching incompleted tasks from a database
-    return await new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          { id: 1, title: 'Incompleted Task 1', userId },
-          { id: 2, title: 'Incompleted Task 2', userId },
-        ]);
-      }, 1000);
+    const filteredTasks = tasks.filter((task) => {
+      switch (state) {
+        case 'completed':
+          return task.completed === true;
+        case 'pending':
+          return task.completed === false;
+        case 'overdue':
+          return task.deadline && new Date(task.deadline) < new Date();
+        default:
+          return true;
+      }
+    });
+
+    return filteredTasks.map((task) => {
+      return {
+        ...task,
+        userId: undefined,
+        created_at: undefined,
+        updated_at: undefined,
+      };
     });
   }
 }

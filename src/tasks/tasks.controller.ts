@@ -1,8 +1,15 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../users/interfaces/user';
+import { User } from '../users/interfaces/user.d';
+import { State, states } from './interfaces/stateParam.d';
 
 @Controller('tasks')
 export class TasksController {
@@ -14,15 +21,13 @@ export class TasksController {
     return await this.tasksService.getAll(user.id);
   }
 
-  @Get('completed')
+  @Get('/state')
   @UseGuards(JwtAuthGuard)
-  async getCompletedTasks(@CurrentUser() user: User) {
-    return await this.tasksService.getCompleted(user.id);
-  }
+  async getByState(@CurrentUser() user: User, @Param('state') state: State) {
+    if (!states.includes(state)) {
+      throw new BadRequestException('Invalid state parameter');
+    }
 
-  @Get('incompleted')
-  @UseGuards(JwtAuthGuard)
-  async getIncompletedTasks(@CurrentUser() user: User) {
-    return await this.tasksService.getIncompleted(user.id);
+    return await this.tasksService.getByState(user.id, state);
   }
 }

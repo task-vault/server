@@ -11,12 +11,16 @@ import { users } from '../users/users.schema';
 
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
-  title: text('title').notNull(),
-  description: text('description'),
-  completed: boolean('completed').notNull().default(false),
   userId: uuid('userId')
     .notNull()
     .references(() => users.id),
+  title: text('title').notNull(),
+  description: text('description'),
+  completed: boolean('completed').notNull().default(false),
+  deadline: timestamp('deadline', {
+    mode: 'date',
+    precision: 0,
+  }),
   created_at: timestamp('created_at', {
     mode: 'date',
     precision: 0,
