@@ -1,2 +1,2 @@
-export const states = ['completed', 'pending', 'overdue'] as const;
+import { states } from '../constants/states';
 export type State = (typeof states)[number];

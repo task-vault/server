@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
-import { Task, TaskInsert } from './interfaces/task.d';
-import { State } from './interfaces/state-param.d';
+import { Task, TaskInsert } from './interfaces/task';
+import { State } from './interfaces/state-param';
 import { tasks } from './tasks.schema';
 
 @Injectable()
@@ -21,6 +21,22 @@ export class TasksService {
         updated_at: undefined,
       };
     });
+  }
+
+  async getSingle(id: Task['id']) {
+    const task = await this.drizzleService.db.query.tasks.findFirst({
+      where: (tasks, { eq }) => eq(tasks.id, id),
+    });
+    if (!task) {
+      throw new NotFoundException(`Task with id ${id} not found`);
+    }
+
+    return {
+      ...task,
+      userId: undefined,
+      created_at: undefined,
+      updated_at: undefined,
+    };
   }
 
   async getByState(userId: string, state: State) {
@@ -54,6 +70,7 @@ export class TasksService {
   async create(userId: string, task: Omit<TaskInsert, 'userId'>) {
     const data: TaskInsert = {
       ...task,
+      deadline: task.deadline ? new Date(task.deadline) : null,
       userId,
     };
     const newTask = (

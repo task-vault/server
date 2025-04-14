@@ -11,8 +11,10 @@ import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/interfaces/user.d';
-import { State, states } from './interfaces/state-param.d';
+import { State } from './interfaces/state-param';
+import { states } from './constants/states';
 import { CreateTaskRequest } from './dto/create-task.request';
+import { Task } from './interfaces/task';
 
 @Controller('tasks')
 export class TasksController {
@@ -24,7 +26,13 @@ export class TasksController {
     return await this.tasksService.getAll(user.id);
   }
 
-  @Get(':state')
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  async getTask(@Param('id') id: Task['id']) {
+    return await this.tasksService.getSingle(id);
+  }
+
+  @Get('/state/:state')
   @UseGuards(JwtAuthGuard)
   async getTaskByState(
     @CurrentUser() user: User,
