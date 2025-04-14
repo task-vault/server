@@ -3,6 +3,7 @@ import { DrizzleService } from '../drizzle/drizzle.service';
 import { Task, TaskInsert } from './interfaces/task';
 import { State } from './interfaces/state-param';
 import { tasks } from './tasks.schema';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class TasksService {
@@ -86,5 +87,37 @@ export class TasksService {
       created_at: undefined,
       updated_at: undefined,
     };
+  }
+
+  async toggleComplete(id: Task['id'], completed: boolean) {
+    const updatedTask = (
+      await this.drizzleService.db
+        .update(tasks)
+        .set({ completed })
+        .where(eq(tasks.id, id))
+        .returning()
+    ).at(0);
+    if (!updatedTask) {
+      throw new NotFoundException(`Task with id ${id} not found`);
+    }
+
+    return {
+      ...updatedTask,
+      userId: undefined,
+      created_at: undefined,
+      updated_at: undefined,
+    };
+  }
+
+  async delete(id: Task['id']) {
+    const deletedTask = (
+      await this.drizzleService.db
+        .delete(tasks)
+        .where(eq(tasks.id, id))
+        .returning()
+    ).at(0);
+    if (!deletedTask) {
+      throw new NotFoundException(`Task with id ${id} not found`);
+    }
   }
 }

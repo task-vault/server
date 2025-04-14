@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Post,
@@ -45,5 +47,26 @@ export class TasksController {
   @UseGuards(JwtAuthGuard)
   async createTask(@CurrentUser() user: User, @Body() task: CreateTaskRequest) {
     return await this.tasksService.create(user.id, task);
+  }
+
+  @Post(':id/complete')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  async completeTask(@Param('id', ParseIntPipe) id: Task['id']) {
+    return await this.tasksService.toggleComplete(id, true);
+  }
+
+  @Post(':id/uncomplete')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  async uncompleteTask(@Param('id', ParseIntPipe) id: Task['id']) {
+    return await this.tasksService.toggleComplete(id, false);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @UseGuards(JwtAuthGuard)
+  async deleteTask(@Param('id', ParseIntPipe) id: Task['id']) {
+    return await this.tasksService.delete(id);
   }
 }
