@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -46,6 +47,13 @@ export class TasksController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async createTask(@CurrentUser() user: User, @Body() task: CreateTaskRequest) {
+    if (task.deadline) {
+      const now = new Date(Date.now());
+      const deadline = new Date(task.deadline);
+      if (deadline.getTime() < now.getTime()) {
+        throw new BadRequestException(['Deadline must be in the future']);
+      }
+    }
     return await this.tasksService.create(user.id, task);
   }
 
