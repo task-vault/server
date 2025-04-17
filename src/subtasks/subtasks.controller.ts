@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
@@ -15,6 +16,7 @@ import { UpdateSubtaskRequest } from './dto/update-subtask.request';
 import { Subtask } from './interfaces/subtask';
 import { DeleteSubtasksRequest } from './dto/delete-subtasks.request';
 import { CompleteSubtasksRequest } from './dto/complete-subtasks.request';
+import { TaskId } from './decorators/task-id.decorator';
 
 @UseGuards(JwtAuthGuard, TaskGuard)
 @Controller('tasks/:taskId/subtasks')
@@ -22,10 +24,14 @@ export class SubtasksController {
   constructor() {}
 
   @Post()
-  createSubtask(@Body() subtask: CreateSubtaskRequest) {
+  createSubtask(
+    @Body() subtask: CreateSubtaskRequest,
+    @TaskId() taskId: number,
+  ) {
     return {
       message: 'Subtask created successfully',
       subtask,
+      taskId,
     };
   }
 
@@ -41,6 +47,7 @@ export class SubtasksController {
     };
   }
 
+  @HttpCode(200) //! Change to 204
   @Delete(':subtaskId')
   deleteSubtask(@Param('subtaskId', ParseIntPipe) subtaskId: Subtask['id']) {
     return {
@@ -49,14 +56,16 @@ export class SubtasksController {
     };
   }
 
+  @HttpCode(200) //! Change to 204
   @Delete()
   deleteSubtasks(@Body() subtaskIds: DeleteSubtasksRequest) {
     return {
       message: 'Subtasks deleted successfully',
-      subtaskIds,
+      subtaskIds: subtaskIds.subtaskIds,
     };
   }
 
+  @HttpCode(200)
   @Post(':subtaskId/complete')
   completeSubtask(@Param('subtaskId', ParseIntPipe) subtaskId: Subtask['id']) {
     return {
@@ -65,6 +74,7 @@ export class SubtasksController {
     };
   }
 
+  @HttpCode(200)
   @Post(':subtaskId/uncomplete')
   uncompleteSubtask(
     @Param('subtaskId', ParseIntPipe) subtaskId: Subtask['id'],
@@ -75,11 +85,12 @@ export class SubtasksController {
     };
   }
 
+  @HttpCode(200)
   @Post('complete')
   completeSubtasks(@Body() subtaskIds: CompleteSubtasksRequest) {
     return {
       message: 'Subtasks completed successfully',
-      subtaskIds,
+      subtaskIds: subtaskIds.subtaskIds,
     };
   }
 }
