@@ -8,23 +8,11 @@ import { DrizzleService } from '../drizzle/drizzle.service';
 import { Subtask, SubtaskInsert } from './interfaces/subtask';
 import { subtasks } from './subtasks.schema';
 import { sql, eq, inArray, and } from 'drizzle-orm';
-
-type ReturnSubtask = Omit<Subtask, 'created_at' | 'updated_at'>;
+import { formatSubtask } from './utils/formatSubtask';
 
 @Injectable()
 export class SubtasksService {
   constructor(private readonly drizzleService: DrizzleService) {}
-
-  private formatSubtask(subtask: Subtask): ReturnSubtask {
-    const formattedSubtask: ReturnSubtask = {
-      id: subtask.id,
-      taskId: subtask.taskId,
-      title: subtask.title,
-      completed: subtask.completed,
-    };
-
-    return formattedSubtask;
-  }
 
   private async checkDuplicateSubtask(subtask: SubtaskInsert) {
     const existingSubtask =
@@ -52,7 +40,8 @@ export class SubtasksService {
         `Subtask with id ${subtaskId} not found on this task`,
       ]);
     }
-    return this.formatSubtask(subtask);
+
+    return subtask;
   }
 
   async create(subtask: SubtaskInsert) {
@@ -66,7 +55,7 @@ export class SubtasksService {
       throw new InternalServerErrorException(['Failed to create subtask']);
     }
 
-    return this.formatSubtask(newSubtask);
+    return formatSubtask(newSubtask);
   }
 
   async update(
@@ -86,7 +75,7 @@ export class SubtasksService {
       throw new InternalServerErrorException(['Failed to update subtask']);
     }
 
-    return this.formatSubtask(updatedSubtask);
+    return formatSubtask(updatedSubtask);
   }
 
   async delete(subtaskId: Subtask['id']) {
@@ -149,6 +138,6 @@ export class SubtasksService {
       return updatedSubtasks;
     });
 
-    return updated.map((subtask) => this.formatSubtask(subtask));
+    return updated.map((subtask) => formatSubtask(subtask));
   }
 }
