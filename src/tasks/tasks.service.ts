@@ -4,10 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
-import { Task, TaskInsert } from './interfaces/task';
+import { Task, TaskInsert, TaskResponse } from './interfaces/task';
 import { State } from './interfaces/state-param';
 import { tasks } from './tasks.schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { User } from '../users/interfaces/user';
 import { formatTask } from './utils/formatTask';
 
@@ -43,7 +43,22 @@ export class TasksService {
     return formatTask(task);
   }
 
-  async getByState(userId: string, state: State): Promise<Partial<Task>[]> {
+  async getProgress(taskId: Task['id']) {
+    const task = (await this.getSingle(taskId)) as TaskResponse;
+    if (!task.subtasks.length) {
+      return { progress: 0 };
+    }
+
+    const completedSubtasks = task.subtasks.filter(
+      (subtask) => subtask.completed,
+    );
+    const progress = Math.round(
+      (completedSubtasks.length / task.subtasks.length) * 100,
+    );
+    return { progress };
+  }
+
+  async getByState(userId: User['id'], state: State) {
     const tasks = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
       with: {
@@ -54,24 +69,23 @@ export class TasksService {
     const filteredTasks = tasks.filter((task) => {
       switch (state) {
         case 'completed':
-          return task.completed === true;
+          return task.completed;
         case 'pending':
-          return task.completed === false;
+          return !task.completed;
         case 'overdue':
-          return !task.completed && task.deadline && task.deadline < new Date();
+          return task.deadline && task.deadline < new Date() && !task.completed;
         default:
-          return true;
+          return false;
       }
     });
 
     return filteredTasks.map((task) => formatTask(task));
   }
 
-  async create(userId: string, task: Omit<TaskInsert, 'userId'>) {
+  async create(task: TaskInsert) {
     const data: TaskInsert = {
       ...task,
       deadline: task.deadline ? new Date(task.deadline) : null,
-      userId,
     };
     const [newTask] = await this.drizzleService.db
       .insert(tasks)
@@ -84,17 +98,28 @@ export class TasksService {
     return formatTask({ ...newTask, subtasks: [] });
   }
 
-  async toggleComplete(taskId: Task['id'], completed: boolean) {
+  async update(
+    taskId: Task['id'],
+    task: TaskInsert | { completed: TaskInsert['completed'] },
+  ) {
+    const data = {
+      ...task,
+      deadline:
+        'deadline' in task && task.deadline ? new Date(task.deadline) : null,
+    };
+
     const [updatedTask] = await this.drizzleService.db
       .update(tasks)
-      .set({ completed })
+      .set(data)
       .where(eq(tasks.id, taskId))
       .returning();
     if (!updatedTask) {
-      throw new NotFoundException([`Task with id ${taskId} not found`]);
+      throw new InternalServerErrorException([
+        `Failed to update task with id ${taskId}`,
+      ]);
     }
 
-    return await this.getSingle(taskId);
+    return await this.getSingle(updatedTask.id);
   }
 
   async delete(taskId: Task['id']) {
@@ -103,7 +128,31 @@ export class TasksService {
       .where(eq(tasks.id, taskId))
       .returning();
     if (!deletedTask) {
-      throw new NotFoundException([`Task with id ${taskId} not found`]);
+      throw new InternalServerErrorException([
+        `Failed to delete task with id ${taskId}`,
+      ]);
     }
+  }
+
+  async deleteMany(userId: User['id'], taskIds: Task['id'][]) {
+    await this.drizzleService.db.transaction(async (tx) => {
+      const deletedTasks = await tx
+        .delete(tasks)
+        .where(and(eq(tasks.userId, userId), inArray(tasks.id, taskIds)))
+        .returning();
+
+      if (deletedTasks.length !== taskIds.length) {
+        try {
+          tx.rollback();
+        } catch {
+          const notFoundIds = taskIds.filter(
+            (id) => !deletedTasks.some((task) => task.id === id),
+          );
+          throw new NotFoundException([
+            `Tasks with ids [${notFoundIds.join(', ')}] not found on this user`,
+          ]);
+        }
+      }
+    });
   }
 }
