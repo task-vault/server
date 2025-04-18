@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Post,
   Res,
@@ -55,8 +56,7 @@ export class UsersController {
     return await this.authService.logout(response, user.id);
   }
 
-  @Post('session')
-  @HttpCode(200)
+  @Get('session')
   @UseGuards(JwtAuthGuard)
   session(@CurrentUser() user: User) {
     return {

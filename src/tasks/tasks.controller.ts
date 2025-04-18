@@ -19,24 +19,22 @@ import { CreateTaskRequest } from './dto/create-task.request';
 import { Task } from './interfaces/task';
 import { StateValidationPipe } from './pipes/state.pipe';
 
+@UseGuards(JwtAuthGuard)
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
   async getTasks(@CurrentUser() user: User) {
     return await this.tasksService.getAll(user.id);
   }
 
   @Get(':taskId')
-  @UseGuards(JwtAuthGuard)
   async getTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
     return await this.tasksService.getSingle(taskId);
   }
 
   @Get('/state/:state')
-  @UseGuards(JwtAuthGuard)
   async getTaskByState(
     @CurrentUser() user: User,
     @Param('state', new StateValidationPipe()) state: State,
@@ -45,7 +43,6 @@ export class TasksController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   async createTask(@CurrentUser() user: User, @Body() task: CreateTaskRequest) {
     if (task.deadline) {
       const now = new Date(Date.now());
@@ -59,21 +56,18 @@ export class TasksController {
 
   @Post(':taskId/complete')
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
   async completeTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
     return await this.tasksService.toggleComplete(taskId, true);
   }
 
   @Post(':taskId/uncomplete')
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
   async uncompleteTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
     return await this.tasksService.toggleComplete(taskId, false);
   }
 
   @Delete(':taskId')
   @HttpCode(204)
-  @UseGuards(JwtAuthGuard)
   async deleteTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
     return await this.tasksService.delete(taskId);
   }

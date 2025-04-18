@@ -1,13 +1,20 @@
-import { IsDateString, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateTaskRequest {
   @IsString()
   @IsNotEmpty()
   title: string;
 
+  @IsOptional()
   @IsString()
-  description?: string;
+  description: string;
 
+  @IsOptional()
   @IsDateString()
-  deadline?: Date;
+  deadline: Date;
 }
