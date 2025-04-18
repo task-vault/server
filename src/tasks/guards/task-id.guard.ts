@@ -3,15 +3,18 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { TasksService } from '../../tasks/tasks.service';
+import { TasksService } from '../tasks.service';
+import { User } from '../../users/interfaces/user';
 
-type TaskIdRequest = Request & {
+export type TaskIdRequest = Request & {
   params: {
     taskId: string;
   };
   taskId: number;
+  user: User;
 };
 
 @Injectable()
@@ -22,17 +25,21 @@ export class TaskGuard implements CanActivate {
     const request = this.getRequest(context);
     const taskId = this.getTaskId(request);
 
-    await this.tasksService.getSingle(Number(taskId));
+    const task = await this.tasksService.getSingle(taskId);
+
+    if (task.userId !== request.user.id) {
+      throw new UnauthorizedException();
+    }
 
     request.taskId = taskId;
     return true;
   }
 
-  getRequest(context: ExecutionContext): TaskIdRequest {
+  private getRequest(context: ExecutionContext): TaskIdRequest {
     return context.switchToHttp().getRequest<TaskIdRequest>();
   }
 
-  getTaskId(request: TaskIdRequest): number {
+  private getTaskId(request: TaskIdRequest): number {
     try {
       const { taskId } = request.params;
       const parsedTaskId = Number(taskId);

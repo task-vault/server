@@ -1,0 +1,1 @@
+ALTER TABLE "subtasks" ADD CONSTRAINT "unique_title_for_taskId" UNIQUE("taskId","title");

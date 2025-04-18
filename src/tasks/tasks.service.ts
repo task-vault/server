@@ -8,27 +8,36 @@ import { Task, TaskInsert } from './interfaces/task';
 import { State } from './interfaces/state-param';
 import { tasks } from './tasks.schema';
 import { eq } from 'drizzle-orm';
+import { User } from '../users/interfaces/user';
+
+type ReturnTask = Omit<Task, 'created_at' | 'updated_at'>;
 
 @Injectable()
 export class TasksService {
   constructor(private readonly drizzleService: DrizzleService) {}
 
-  async getAll(userId: string): Promise<Partial<Task>[]> {
+  private formatTask(task: Task): ReturnTask {
+    const formattedTask: ReturnTask = {
+      id: task.id,
+      userId: task.userId,
+      title: task.title,
+      description: task.description,
+      completed: task.completed,
+      deadline: task.deadline,
+    };
+
+    return formattedTask;
+  }
+
+  async getAll(userId: User['id']) {
     const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
     });
 
-    return tasks.map((task) => {
-      return {
-        ...task,
-        userId: undefined,
-        created_at: undefined,
-        updated_at: undefined,
-      };
-    });
+    return tasks.map((task) => this.formatTask(task));
   }
 
-  async getSingle(taskId: Task['id']): Promise<Partial<Task>> {
+  async getSingle(taskId: Task['id']) {
     const task = await this.drizzleService.db.query.tasks.findFirst({
       where: (tasks, { eq }) => eq(tasks.id, taskId),
     });
@@ -36,15 +45,10 @@ export class TasksService {
       throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
 
-    return {
-      ...task,
-      userId: undefined,
-      created_at: undefined,
-      updated_at: undefined,
-    };
+    return this.formatTask(task);
   }
 
-  async getByState(userId: string, state: State): Promise<Partial<Task>[]> {
+  async getByState(userId: string, state: State) {
     const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
     });
@@ -62,20 +66,10 @@ export class TasksService {
       }
     });
 
-    return filteredTasks.map((task) => {
-      return {
-        ...task,
-        userId: undefined,
-        created_at: undefined,
-        updated_at: undefined,
-      };
-    });
+    return filteredTasks.map((task) => this.formatTask(task));
   }
 
-  async create(
-    userId: string,
-    task: Omit<TaskInsert, 'userId'>,
-  ): Promise<Partial<Task>> {
+  async create(userId: string, task: Omit<TaskInsert, 'userId'>) {
     const data: TaskInsert = {
       ...task,
       deadline: task.deadline ? new Date(task.deadline) : null,
@@ -88,18 +82,10 @@ export class TasksService {
       throw new InternalServerErrorException(['Failed to create task']);
     }
 
-    return {
-      ...newTask,
-      userId: undefined,
-      created_at: undefined,
-      updated_at: undefined,
-    };
+    return this.formatTask(newTask);
   }
 
-  async toggleComplete(
-    taskId: Task['id'],
-    completed: boolean,
-  ): Promise<Partial<Task>> {
+  async toggleComplete(taskId: Task['id'], completed: boolean) {
     const updatedTask = (
       await this.drizzleService.db
         .update(tasks)
@@ -111,12 +97,7 @@ export class TasksService {
       throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
 
-    return {
-      ...updatedTask,
-      userId: undefined,
-      created_at: undefined,
-      updated_at: undefined,
-    };
+    return this.formatTask(updatedTask);
   }
 
   async delete(taskId: Task['id']) {

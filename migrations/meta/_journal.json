@@ -36,6 +36,13 @@
       "when": 1744920846856,
       "tag": "0004_parallel_luminals",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1744938058708,
+      "tag": "0005_bent_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }
