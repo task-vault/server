@@ -5,59 +5,23 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
-import * as schema from './users.schema';
 import { hash } from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { User, UserInsert } from './interfaces/user';
+import { formatUser } from './utils/formatUser';
+import { users } from './users.schema';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly drizzleService: DrizzleService) {}
 
-  async create(req: UserInsert): Promise<Partial<User>> {
-    const { firstName, lastName, email, password } = req;
-
-    const existingUser = await this.drizzleService.db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, email),
-    });
-    if (existingUser) {
-      throw new BadRequestException(['A user with this email already exists']);
-    }
-
-    const hashedPassword = await hash(password, 10);
-    if (!hashedPassword) {
-      throw new InternalServerErrorException(['Failed to secure password']);
-    }
-
-    const user = (
-      await this.drizzleService.db
-        .insert(schema.users)
-        .values({
-          firstName,
-          lastName,
-          email,
-          password: hashedPassword,
-        })
-        .returning()
-    ).at(0);
-    if (!user) {
-      throw new InternalServerErrorException(['Failed to create user']);
-    }
-
-    return {
-      ...user,
-      password: undefined,
-      refreshToken: undefined,
-    };
-  }
-
-  async getUser(userId?: string, email?: string): Promise<User> {
+  async getSingle(userId?: string, email?: string): Promise<User> {
     if (!userId && !email) {
       throw new InternalServerErrorException(['No id or email provided']);
     }
 
     const user = await this.drizzleService.db.query.users.findFirst({
-      where: (users, { eq }) => {
+      where: () => {
         if (userId) {
           return eq(users.id, userId);
         }
@@ -71,6 +35,33 @@ export class UsersService {
     return user;
   }
 
+  async create(req: UserInsert) {
+    const existingUser = await this.drizzleService.db.query.users.findFirst({
+      where: () => eq(users.email, req.email),
+    });
+    if (existingUser) {
+      throw new BadRequestException(['A user with this email already exists']);
+    }
+
+    const hashedPassword = await hash(req.password, 10);
+    if (!hashedPassword) {
+      throw new InternalServerErrorException(['Failed to secure password']);
+    }
+
+    const [newUser] = await this.drizzleService.db
+      .insert(users)
+      .values({
+        ...req,
+        password: hashedPassword,
+      })
+      .returning();
+    if (!newUser) {
+      throw new InternalServerErrorException(['Failed to create user']);
+    }
+
+    return formatUser(newUser);
+  }
+
   async setRefreshToken(
     userId: string,
     refreshToken: UserInsert['refreshToken'],
@@ -81,13 +72,11 @@ export class UsersService {
       ]);
     }
 
-    const updatedUser = (
-      await this.drizzleService.db
-        .update(schema.users)
-        .set({ refreshToken })
-        .where(eq(schema.users.id, userId))
-        .returning()
-    ).at(0);
+    const [updatedUser] = await this.drizzleService.db
+      .update(users)
+      .set({ refreshToken })
+      .where(eq(users.id, userId))
+      .returning();
     if (!updatedUser) {
       throw new InternalServerErrorException([
         'Failed to create refresh tokoen for the user',
@@ -100,13 +89,11 @@ export class UsersService {
       throw new InternalServerErrorException(['No userId provided']);
     }
 
-    const updatedUser = (
-      await this.drizzleService.db
-        .update(schema.users)
-        .set({ refreshToken: null })
-        .where(eq(schema.users.id, userId))
-        .returning()
-    ).at(0);
+    const [updatedUser] = await this.drizzleService.db
+      .update(users)
+      .set({ refreshToken: null })
+      .where(eq(users.id, userId))
+      .returning();
     if (!updatedUser) {
       throw new InternalServerErrorException([
         'Failed to revoke refresh token for the user',

@@ -150,7 +150,7 @@ export class AuthService {
 
   async validateUser(email: string, password: string) {
     try {
-      const user = await this.usersService.getUser(undefined, email);
+      const user = await this.usersService.getSingle(undefined, email);
       if (!user) {
         throw new Error();
       }
@@ -168,7 +168,7 @@ export class AuthService {
 
   async validateRefreshToken(refreshToken: string, userId: string) {
     try {
-      const user = await this.usersService.getUser(userId);
+      const user = await this.usersService.getSingle(userId);
       if (!user.refreshToken) {
         throw new Error();
       }
