@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { User } from '../users/interfaces/user';
 import { Response } from 'express';
 import { TokenPayload } from './interfaces/token-payload';
+import { decrypt, encrypt } from './utils/refreshToken-encryption';
 
 @Injectable()
 export class AuthService {
@@ -72,8 +73,32 @@ export class AuthService {
     const refreshExpirationMS = this.configService.getOrThrow<number>(
       'JWT_REFRESH_EXPIRATION',
     );
+    const refreshSecret =
+      this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
+    const encryptionKey = this.configService.getOrThrow<string>(
+      'JWT_REFRESH_ENCRYTPION_KEY',
+    );
+    const encryptionIV = this.configService.getOrThrow<string>(
+      'JWT_REFRESH_ENCRYTPION_IV',
+    );
 
     if (user.refreshToken) {
+      const decryptedRefreshToken = decrypt(
+        user.refreshToken,
+        encryptionKey,
+        encryptionIV,
+      );
+      const payload: TokenPayload = this.jwtService.verify<TokenPayload>(
+        decryptedRefreshToken,
+        {
+          secret: refreshSecret,
+        },
+      );
+      if (!payload || payload.userId !== user.id) {
+        await this.usersService.revokeRefreshToken(user.id);
+        throw new UnauthorizedException(['Invalid refresh token']);
+      }
+
       const expirationTime = user.updated_at.getTime() + refreshExpirationMS;
       const currentTime = new Date(Date.now()).getTime();
 
@@ -90,17 +115,22 @@ export class AuthService {
     }
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      secret: refreshSecret,
       expiresIn: `${refreshExpirationMS}ms`,
     });
-    await this.usersService.setRefreshToken(user.id, refreshToken);
+    const encryptedRefreshToken = encrypt(
+      refreshToken,
+      encryptionKey,
+      encryptionIV,
+    );
+    await this.usersService.setRefreshToken(user.id, encryptedRefreshToken);
 
     const expirationDate = new Date(Date.now());
     expirationDate.setMilliseconds(
       expirationDate.getMilliseconds() + refreshExpirationMS,
     );
 
-    return { refreshToken, expires: expirationDate };
+    return { refreshToken: encryptedRefreshToken, expires: expirationDate };
   }
 
   async logout(response: Response, userId: string) {
@@ -139,7 +169,11 @@ export class AuthService {
   async validateRefreshToken(refreshToken: string, userId: string) {
     try {
       const user = await this.usersService.getUser(userId);
-      if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
+      if (!user.refreshToken) {
+        throw new Error();
+      }
+
+      if (user.refreshToken !== refreshToken) {
         throw new Error();
       }
 
