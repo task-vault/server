@@ -38,18 +38,18 @@ export class TasksController {
     return `Task with ID ${taskId} retrieved successfully`;
   }
 
+  @UseGuards(TaskGuard)
+  @Get(':taskId/progress')
+  async getTaskProgress(@TaskId() taskId: Task['id']) {
+    return `Progress of task with ID ${taskId} retrieved successfully`;
+  }
+
   @Get('state/:state')
   async getTasksByState(
     @CurrentUser() user: User,
     @Param('state', StateValidationPipe) state: State,
   ) {
     return `Tasks with state ${state} retrieved successfully for user ${user.id}`;
-  }
-
-  @UseGuards(TaskGuard)
-  @Get(':taskId/progress')
-  async getTaskProgress(@TaskId() taskId: Task['id']) {
-    return `Progress of task with ID ${taskId} retrieved successfully`;
   }
 
   @Post()
@@ -88,10 +88,9 @@ export class TasksController {
     return `Task with ID ${taskId} marked as uncompleted successfully`;
   }
 
-  @UseGuards(TaskGuard)
   @HttpCode(204)
   @Delete()
-  async deleteManyTasks(
+  async deleteTasks(
     @CurrentUser() user: User,
     @Body() body: DeleteTasksRequest,
   ) {
