@@ -1,9 +1,7 @@
 FROM node:23-slim
 
 WORKDIR /app
-
-COPY package.json ./
-COPY pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
 RUN corepack enable
 RUN pnpm install
@@ -11,5 +9,6 @@ RUN pnpm install
 COPY . .
 
 RUN pnpm build
+RUN pnpm prune --prod
 
 CMD ["pnpm", "start:prod"]
