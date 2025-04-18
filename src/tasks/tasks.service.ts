@@ -4,114 +4,202 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DrizzleService } from '../drizzle/drizzle.service';
-import { Task, TaskInsert } from './interfaces/task';
+import { Task, TaskInsert, TaskResponse } from './interfaces/task';
 import { State } from './interfaces/state-param';
 import { tasks } from './tasks.schema';
-import { eq } from 'drizzle-orm';
-import { User } from '../users/interfaces/user';
-
-type ReturnTask = Omit<Task, 'created_at' | 'updated_at'>;
+import { and, eq, inArray } from 'drizzle-orm';
+import { formatTask } from './utils/formatTask';
+import { isTaskOverdue } from './utils/isTaskOverdue';
+import { subtasks } from '../subtasks/subtasks.schema';
 
 @Injectable()
 export class TasksService {
   constructor(private readonly drizzleService: DrizzleService) {}
 
-  private formatTask(task: Task): ReturnTask {
-    const formattedTask: ReturnTask = {
-      id: task.id,
-      userId: task.userId,
-      title: task.title,
-      description: task.description,
-      completed: task.completed,
-      deadline: task.deadline,
-    };
-
-    return formattedTask;
-  }
-
-  async getAll(userId: User['id']) {
-    const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
+  async getAll(userId: Task['userId']) {
+    const tasks = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
+      with: {
+        subtasks: true,
+      },
     });
 
-    return tasks.map((task) => this.formatTask(task));
+    return tasks.map((task) => formatTask(task));
   }
 
-  async getSingle(taskId: Task['id']) {
+  async getSingle(taskId: Task['id'], wholeTask: boolean = false) {
     const task = await this.drizzleService.db.query.tasks.findFirst({
       where: (tasks, { eq }) => eq(tasks.id, taskId),
+      with: {
+        subtasks: true,
+      },
     });
     if (!task) {
       throw new NotFoundException([`Task with id ${taskId} not found`]);
     }
 
-    return this.formatTask(task);
+    if (wholeTask) {
+      return task as Task;
+    }
+    return formatTask(task);
   }
 
-  async getByState(userId: string, state: State): Promise<Partial<Task>[]> {
-    const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
+  async getProgress(taskId: Task['id']) {
+    const task = (await this.getSingle(taskId)) as TaskResponse;
+    if (!task.subtasks.length) {
+      return { progress: 0 };
+    }
+
+    const completedSubtasks = task.subtasks.filter(
+      (subtask) => subtask.completed,
+    );
+    const progress = Math.round(
+      (completedSubtasks.length / task.subtasks.length) * 100,
+    );
+    return { progress };
+  }
+
+  async checkCompleted(taskId: Task['id']) {
+    const { progress } = await this.getProgress(taskId);
+    const [updatedTask] = await this.drizzleService.db
+      .update(tasks)
+      .set({ completed: progress === 100 })
+      .where(eq(tasks.id, taskId))
+      .returning();
+
+    if (!updatedTask) {
+      throw new InternalServerErrorException([
+        `Failed to update task with id ${taskId}`,
+      ]);
+    }
+
+    return (await this.getSingle(updatedTask.id)) as TaskResponse;
+  }
+
+  async getByState(userId: Task['userId'], state: State) {
+    const tasks = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
+      with: {
+        subtasks: true,
+      },
     });
 
     const filteredTasks = tasks.filter((task) => {
       switch (state) {
         case 'completed':
-          return task.completed === true;
+          return task.completed;
         case 'pending':
-          return task.completed === false;
+          return !task.completed && !isTaskOverdue(task);
         case 'overdue':
-          return task.deadline && new Date(task.deadline) < new Date();
+          return isTaskOverdue(task);
         default:
-          return true;
+          return false;
       }
     });
 
-    return filteredTasks.map((task) => this.formatTask(task));
+    return filteredTasks.map((task) => formatTask(task));
   }
 
-  async create(
-    userId: string,
-    task: Omit<TaskInsert, 'userId'>,
-  ): Promise<Partial<Task>> {
+  async create(task: TaskInsert) {
     const data: TaskInsert = {
       ...task,
       deadline: task.deadline ? new Date(task.deadline) : null,
-      userId,
     };
-    const newTask = (
-      await this.drizzleService.db.insert(tasks).values(data).returning()
-    ).at(0);
+    const [newTask] = await this.drizzleService.db
+      .insert(tasks)
+      .values(data)
+      .returning();
     if (!newTask) {
       throw new InternalServerErrorException(['Failed to create task']);
     }
 
-    return this.formatTask(newTask);
+    return formatTask({ ...newTask, subtasks: [] });
   }
 
-  async toggleComplete(taskId: Task['id'], completed: boolean) {
-    const updatedTask = (
-      await this.drizzleService.db
+  async update(taskId: Task['id'], task: TaskInsert) {
+    const data = {
+      ...task,
+      deadline: task.deadline ? new Date(task.deadline) : null,
+    };
+
+    const [updatedTask] = await this.drizzleService.db
+      .update(tasks)
+      .set(data)
+      .where(eq(tasks.id, taskId))
+      .returning();
+    if (!updatedTask) {
+      throw new InternalServerErrorException([
+        `Failed to update task with id ${taskId}`,
+      ]);
+    }
+
+    return (await this.getSingle(updatedTask.id)) as TaskResponse;
+  }
+
+  async toggleCompleted(taskId: Task['id'], completed: boolean) {
+    await this.drizzleService.db.transaction(async (tx) => {
+      const [updatedTask] = await tx
         .update(tasks)
         .set({ completed })
         .where(eq(tasks.id, taskId))
-        .returning()
-    ).at(0);
-    if (!updatedTask) {
-      throw new NotFoundException([`Task with id ${taskId} not found`]);
-    }
+        .returning();
 
-    return this.formatTask(updatedTask);
+      if (!updatedTask) {
+        throw new InternalServerErrorException([
+          `Failed to update task with id ${taskId}`,
+        ]);
+      }
+
+      const updatedSubtasks = await tx
+        .update(subtasks)
+        .set({ completed })
+        .where(eq(subtasks.taskId, taskId));
+
+      if (!updatedSubtasks) {
+        try {
+          tx.rollback();
+        } catch {
+          throw new InternalServerErrorException([
+            `Failed to update subtasks for task with id ${taskId}`,
+          ]);
+        }
+      }
+    });
+
+    return (await this.getSingle(taskId)) as TaskResponse;
   }
 
   async delete(taskId: Task['id']) {
-    const deletedTask = (
-      await this.drizzleService.db
-        .delete(tasks)
-        .where(eq(tasks.id, taskId))
-        .returning()
-    ).at(0);
+    const [deletedTask] = await this.drizzleService.db
+      .delete(tasks)
+      .where(eq(tasks.id, taskId))
+      .returning();
     if (!deletedTask) {
-      throw new NotFoundException([`Task with id ${taskId} not found`]);
+      throw new InternalServerErrorException([
+        `Failed to delete task with id ${taskId}`,
+      ]);
     }
+  }
+
+  async deleteMany(userId: Task['userId'], taskIds: Task['id'][]) {
+    await this.drizzleService.db.transaction(async (tx) => {
+      const deletedTasks = await tx
+        .delete(tasks)
+        .where(and(eq(tasks.userId, userId), inArray(tasks.id, taskIds)))
+        .returning();
+
+      if (deletedTasks.length !== taskIds.length) {
+        try {
+          tx.rollback();
+        } catch {
+          const notFoundIds = taskIds.filter(
+            (id) => !deletedTasks.some((task) => task.id === id),
+          );
+          throw new NotFoundException([
+            `Tasks with ids [${notFoundIds.join(', ')}] not found on this user`,
+          ]);
+        }
+      }
+    });
   }
 }

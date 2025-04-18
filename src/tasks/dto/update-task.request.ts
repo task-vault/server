@@ -5,7 +5,8 @@ import {
   IsString,
 } from 'class-validator';
 
-export class CreateTaskRequest {
+export class UpdateTaskRequest {
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   title: string;

@@ -1,23 +1,26 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   Param,
-  ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../users/interfaces/user.d';
+import { TaskGuard } from './guards/task-id.guard';
+import { TaskId } from './decorators/task-id.decorator';
+import { Task, TaskInsert, TaskResponse } from './interfaces/task';
+import { StateValidationPipe } from './pipes/state.pipe';
 import { State } from './interfaces/state-param';
 import { CreateTaskRequest } from './dto/create-task.request';
-import { Task } from './interfaces/task';
-import { StateValidationPipe } from './pipes/state.pipe';
+import { UpdateTaskRequest } from './dto/update-task.request';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../users/interfaces/user';
+import { DeleteTasksRequest } from './dto/delete-tasks.request';
+import { TasksService } from './tasks.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -25,50 +28,82 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
-  async getTasks(@CurrentUser() user: User) {
+  async getAllTasks(@CurrentUser() user: User) {
     return await this.tasksService.getAll(user.id);
   }
 
+  @UseGuards(TaskGuard)
   @Get(':taskId')
-  async getTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
-    return await this.tasksService.getSingle(taskId);
+  async getSingleTask(@TaskId() taskId: Task['id']) {
+    return (await this.tasksService.getSingle(taskId)) as TaskResponse;
   }
 
-  @Get('/state/:state')
-  async getTaskByState(
+  @UseGuards(TaskGuard)
+  @Get(':taskId/progress')
+  async getTaskProgress(@TaskId() taskId: Task['id']) {
+    return await this.tasksService.getProgress(taskId);
+  }
+
+  @Get('state/:state')
+  async getTasksByState(
     @CurrentUser() user: User,
-    @Param('state', new StateValidationPipe()) state: State,
+    @Param('state', StateValidationPipe) state: State,
   ) {
     return await this.tasksService.getByState(user.id, state);
   }
 
   @Post()
   async createTask(@CurrentUser() user: User, @Body() task: CreateTaskRequest) {
-    if (task.deadline) {
-      const now = new Date(Date.now());
-      const deadline = new Date(task.deadline);
-      if (deadline.getTime() < now.getTime()) {
-        throw new BadRequestException(['Deadline must be in the future']);
-      }
-    }
-    return await this.tasksService.create(user.id, task);
+    const taskData: TaskInsert = {
+      ...task,
+      userId: user.id,
+    };
+
+    return await this.tasksService.create(taskData);
   }
 
-  @Post(':taskId/complete')
-  @HttpCode(200)
-  async completeTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
-    return await this.tasksService.toggleComplete(taskId, true);
+  @UseGuards(TaskGuard)
+  @Patch(':taskId')
+  async updateTask(
+    @CurrentUser() user: User,
+    @TaskId() taskId: Task['id'],
+    @Body() task: UpdateTaskRequest,
+  ) {
+    const taskData: TaskInsert = {
+      ...task,
+      userId: user.id,
+    };
+
+    return await this.tasksService.update(taskId, taskData);
   }
 
-  @Post(':taskId/uncomplete')
-  @HttpCode(200)
-  async uncompleteTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
-    return await this.tasksService.toggleComplete(taskId, false);
-  }
-
-  @Delete(':taskId')
+  @UseGuards(TaskGuard)
   @HttpCode(204)
-  async deleteTask(@Param('taskId', ParseIntPipe) taskId: Task['id']) {
+  @Delete(':taskId')
+  async deleteTask(@TaskId() taskId: Task['id']) {
     return await this.tasksService.delete(taskId);
+  }
+
+  @UseGuards(TaskGuard)
+  @HttpCode(200)
+  @Post(':taskId/complete')
+  async completeTask(@TaskId() taskId: Task['id']) {
+    return await this.tasksService.toggleCompleted(taskId, true);
+  }
+
+  @UseGuards(TaskGuard)
+  @HttpCode(200)
+  @Post(':taskId/uncomplete')
+  async uncompleteTask(@TaskId() taskId: Task['id']) {
+    return await this.tasksService.toggleCompleted(taskId, false);
+  }
+
+  @HttpCode(204)
+  @Delete()
+  async deleteTasks(
+    @CurrentUser() user: User,
+    @Body() body: DeleteTasksRequest,
+  ) {
+    return await this.tasksService.deleteMany(user.id, body.taskIds);
   }
 }

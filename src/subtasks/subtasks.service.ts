@@ -8,23 +8,15 @@ import { DrizzleService } from '../drizzle/drizzle.service';
 import { Subtask, SubtaskInsert } from './interfaces/subtask';
 import { subtasks } from './subtasks.schema';
 import { sql, eq, inArray, and } from 'drizzle-orm';
-
-type ReturnSubtask = Omit<Subtask, 'created_at' | 'updated_at'>;
+import { formatSubtask } from './utils/formatSubtask';
+import { TasksService } from '../tasks/tasks.service';
 
 @Injectable()
 export class SubtasksService {
-  constructor(private readonly drizzleService: DrizzleService) {}
-
-  private formatSubtask(subtask: Subtask): ReturnSubtask {
-    const formattedSubtask: ReturnSubtask = {
-      id: subtask.id,
-      taskId: subtask.taskId,
-      title: subtask.title,
-      completed: subtask.completed,
-    };
-
-    return formattedSubtask;
-  }
+  constructor(
+    private readonly drizzleService: DrizzleService,
+    private readonly tasksService: TasksService,
+  ) {}
 
   private async checkDuplicateSubtask(subtask: SubtaskInsert) {
     const existingSubtask =
@@ -52,7 +44,8 @@ export class SubtasksService {
         `Subtask with id ${subtaskId} not found on this task`,
       ]);
     }
-    return this.formatSubtask(subtask);
+
+    return subtask;
   }
 
   async create(subtask: SubtaskInsert) {
@@ -66,7 +59,8 @@ export class SubtasksService {
       throw new InternalServerErrorException(['Failed to create subtask']);
     }
 
-    return this.formatSubtask(newSubtask);
+    await this.tasksService.checkCompleted(newSubtask.taskId);
+    return formatSubtask(newSubtask);
   }
 
   async update(
@@ -86,7 +80,11 @@ export class SubtasksService {
       throw new InternalServerErrorException(['Failed to update subtask']);
     }
 
-    return this.formatSubtask(updatedSubtask);
+    if ('completed' in subtask) {
+      await this.tasksService.checkCompleted(updatedSubtask.taskId);
+    }
+
+    return formatSubtask(updatedSubtask);
   }
 
   async delete(subtaskId: Subtask['id']) {
@@ -97,6 +95,8 @@ export class SubtasksService {
     if (!deletedSubtask) {
       throw new InternalServerErrorException(['Failed to delete subtask']);
     }
+
+    await this.tasksService.checkCompleted(deletedSubtask.taskId);
   }
 
   async deleteMany(taskId: Subtask['taskId'], subtaskIds: Subtask['id'][]) {
@@ -121,13 +121,19 @@ export class SubtasksService {
         }
       }
     });
+
+    await this.tasksService.checkCompleted(taskId);
   }
 
-  async completeMany(taskId: Subtask['taskId'], subtaskIds: Subtask['id'][]) {
+  async toggleCompleteMany(
+    taskId: Subtask['taskId'],
+    subtaskIds: Subtask['id'][],
+    completed = true,
+  ) {
     const updated = await this.drizzleService.db.transaction(async (tx) => {
       const updatedSubtasks = await tx
         .update(subtasks)
-        .set({ completed: true })
+        .set({ completed })
         .where(
           and(inArray(subtasks.id, subtaskIds), eq(subtasks.taskId, taskId)),
         )
@@ -149,6 +155,7 @@ export class SubtasksService {
       return updatedSubtasks;
     });
 
-    return updated.map((subtask) => this.formatSubtask(subtask));
+    await this.tasksService.checkCompleted(taskId);
+    return updated.map((subtask) => formatSubtask(subtask));
   }
 }
