@@ -10,6 +10,7 @@ import { tasks } from './tasks.schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { User } from '../users/interfaces/user';
 import { formatTask } from './utils/formatTask';
+import { isTaskOverdue } from './utils/isTaskOverdue';
 
 @Injectable()
 export class TasksService {
@@ -71,9 +72,9 @@ export class TasksService {
         case 'completed':
           return task.completed;
         case 'pending':
-          return !task.completed;
+          return !task.completed && !isTaskOverdue(task);
         case 'overdue':
-          return task.deadline && task.deadline < new Date() && !task.completed;
+          return isTaskOverdue(task);
         default:
           return false;
       }
