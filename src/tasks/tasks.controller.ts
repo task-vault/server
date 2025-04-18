@@ -88,18 +88,14 @@ export class TasksController {
   @HttpCode(200)
   @Post(':taskId/complete')
   async completeTask(@TaskId() taskId: Task['id']) {
-    return await this.tasksService.update(taskId, {
-      completed: true,
-    });
+    return await this.tasksService.toggleCompleted(taskId, true);
   }
 
   @UseGuards(TaskGuard)
   @HttpCode(200)
   @Post(':taskId/uncomplete')
   async uncompleteTask(@TaskId() taskId: Task['id']) {
-    return await this.tasksService.update(taskId, {
-      completed: false,
-    });
+    return await this.tasksService.toggleCompleted(taskId, false);
   }
 
   @HttpCode(204)

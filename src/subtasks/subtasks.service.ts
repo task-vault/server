@@ -9,10 +9,14 @@ import { Subtask, SubtaskInsert } from './interfaces/subtask';
 import { subtasks } from './subtasks.schema';
 import { sql, eq, inArray, and } from 'drizzle-orm';
 import { formatSubtask } from './utils/formatSubtask';
+import { TasksService } from '../tasks/tasks.service';
 
 @Injectable()
 export class SubtasksService {
-  constructor(private readonly drizzleService: DrizzleService) {}
+  constructor(
+    private readonly drizzleService: DrizzleService,
+    private readonly tasksService: TasksService,
+  ) {}
 
   private async checkDuplicateSubtask(subtask: SubtaskInsert) {
     const existingSubtask =
@@ -55,6 +59,7 @@ export class SubtasksService {
       throw new InternalServerErrorException(['Failed to create subtask']);
     }
 
+    await this.tasksService.checkCompleted(newSubtask.taskId);
     return formatSubtask(newSubtask);
   }
 
@@ -75,6 +80,10 @@ export class SubtasksService {
       throw new InternalServerErrorException(['Failed to update subtask']);
     }
 
+    if ('completed' in subtask) {
+      await this.tasksService.checkCompleted(updatedSubtask.taskId);
+    }
+
     return formatSubtask(updatedSubtask);
   }
 
@@ -86,6 +95,8 @@ export class SubtasksService {
     if (!deletedSubtask) {
       throw new InternalServerErrorException(['Failed to delete subtask']);
     }
+
+    await this.tasksService.checkCompleted(deletedSubtask.taskId);
   }
 
   async deleteMany(taskId: Subtask['taskId'], subtaskIds: Subtask['id'][]) {
@@ -110,13 +121,19 @@ export class SubtasksService {
         }
       }
     });
+
+    await this.tasksService.checkCompleted(taskId);
   }
 
-  async completeMany(taskId: Subtask['taskId'], subtaskIds: Subtask['id'][]) {
+  async toggleCompleteMany(
+    taskId: Subtask['taskId'],
+    subtaskIds: Subtask['id'][],
+    completed = true,
+  ) {
     const updated = await this.drizzleService.db.transaction(async (tx) => {
       const updatedSubtasks = await tx
         .update(subtasks)
-        .set({ completed: true })
+        .set({ completed })
         .where(
           and(inArray(subtasks.id, subtaskIds), eq(subtasks.taskId, taskId)),
         )
@@ -138,6 +155,7 @@ export class SubtasksService {
       return updatedSubtasks;
     });
 
+    await this.tasksService.checkCompleted(taskId);
     return updated.map((subtask) => formatSubtask(subtask));
   }
 }

@@ -83,7 +83,10 @@ export class SubtasksController {
     @TaskId() taskId: Subtask['taskId'],
     @Body() body: CompleteSubtasksRequest,
   ) {
-    return await this.subtasksService.completeMany(taskId, body.subtaskIds);
+    return await this.subtasksService.toggleCompleteMany(
+      taskId,
+      body.subtaskIds,
+    );
   }
 
   @HttpCode(204)
