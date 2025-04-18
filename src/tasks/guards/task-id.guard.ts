@@ -8,6 +8,7 @@ import {
 import { Request } from 'express';
 import { TasksService } from '../tasks.service';
 import { User } from '../../users/interfaces/user';
+import { Task } from '../interfaces/task';
 
 export type TaskIdRequest = Request & {
   params: {
@@ -25,7 +26,7 @@ export class TaskGuard implements CanActivate {
     const request = this.getRequest(context);
     const taskId = this.getTaskId(request);
 
-    const task = await this.tasksService.getSingle(taskId);
+    const task = (await this.tasksService.getSingle(taskId, true)) as Task;
 
     if (task.userId !== request.user.id) {
       throw new UnauthorizedException();
