@@ -48,7 +48,7 @@ export class TasksService {
     return this.formatTask(task);
   }
 
-  async getByState(userId: string, state: State) {
+  async getByState(userId: string, state: State): Promise<Partial<Task>[]> {
     const tasks: Task[] = await this.drizzleService.db.query.tasks.findMany({
       where: (tasks, { eq }) => eq(tasks.userId, userId),
     });
@@ -69,7 +69,10 @@ export class TasksService {
     return filteredTasks.map((task) => this.formatTask(task));
   }
 
-  async create(userId: string, task: Omit<TaskInsert, 'userId'>) {
+  async create(
+    userId: string,
+    task: Omit<TaskInsert, 'userId'>,
+  ): Promise<Partial<Task>> {
     const data: TaskInsert = {
       ...task,
       deadline: task.deadline ? new Date(task.deadline) : null,
