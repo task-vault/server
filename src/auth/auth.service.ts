@@ -88,15 +88,17 @@ export class AuthService {
         encryptionKey,
         encryptionIV,
       );
-      const payload: TokenPayload = this.jwtService.verify<TokenPayload>(
-        decryptedRefreshToken,
-        {
+      let isValid = false;
+      let payload: TokenPayload | undefined;
+      try {
+        payload = this.jwtService.verify<TokenPayload>(decryptedRefreshToken, {
           secret: refreshSecret,
-        },
-      );
-      if (!payload || payload.userId !== user.id) {
-        await this.usersService.revokeRefreshToken(user.id);
-        throw new UnauthorizedException(['Invalid refresh token']);
+        });
+        if (payload.userId === user.id) {
+          isValid = true;
+        }
+      } catch {
+        /* empty */
       }
 
       const expirationTime = user.updated_at.getTime() + refreshExpirationMS;
@@ -107,7 +109,7 @@ export class AuthService {
         expirationDate.getMilliseconds() + refreshExpirationMS,
       );
 
-      if (currentTime < expirationTime) {
+      if (currentTime < expirationTime && isValid) {
         return { refreshToken: user.refreshToken, expires: expirationDate };
       }
 
